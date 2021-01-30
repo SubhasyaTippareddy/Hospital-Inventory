@@ -10,12 +10,17 @@ let middleware = require('./middleware');
 console.log("Start");
 const url = 'mongodb://localhost:27017';
 const dbName = 'hospitalManagement';
+let db;
+let col1,col2;
+MongoC.connect(url,{useUnifiedTopology:true},(err,client)=>{
+  if(!err) {
+    db=client.db(dbName);
+    col1=db.collection("Hospitals");
+    col2=db.collection("Ventilators");
+  }
+})
 //Fetches Hospital Details
 app.get('/hospitals', middleware.checkToken,(req,res)=>{
-  MongoC.connect(url,{ useUnifiedTopology: true}, (err,client)=>{
-    if(!err){
-      const db=client.db(dbName);
-      const col1=db.collection("Hospitals");
       var name=req.query.hname;
       var query1;
       if(name===undefined) //if no query is given, all the documents are returned
@@ -28,16 +33,9 @@ app.get('/hospitals', middleware.checkToken,(req,res)=>{
           console.log("Hospital Details fetched.");
         }
       });
-    }
-  });
 });
 //Gets Ventilator details
 app.get('/ventilators',middleware.checkToken,(req,res)=>{
-  MongoC.connect(url,{ useUnifiedTopology: true }, function(err, client) {
-    if(err) {console.log(err); }
-    else{
-      const db=client.db(dbName);
-      const col2= db.collection("Ventilators");
       var stat=req.body.status;
       var name=req.body.hname;
       var query2;
@@ -61,43 +59,26 @@ app.get('/ventilators',middleware.checkToken,(req,res)=>{
             console.log("Ventilator Details fetched.");
           }
       });  
-    }
-  });
 });
 //To Update the status of a ventilator
 app.patch('/ventilators',middleware.checkToken,(req,res)=>{
   var id=req.body.vid;
   var stat=req.body.status;
-  MongoC.connect(url,{ useUnifiedTopology: true }, function(err, client) {
-    if(err) {console.log(err); }
-    else{
-      const db=client.db(dbName);
-      const col2= db.collection("Ventilators");
-      let k=0;
-      col2.countDocuments({vid:id},(err,result)=>{
+  let k=0;
+  col2.countDocuments({vid:id},(err,result)=>{
         if(result>0){
           col2.updateOne({vid:id},{$set:{status:stat}});
-          var query={vid: id};
-          col2.find(query).toArray((err,doc)=>{
-            if(!err)
-              res.send("Ventilator "+id+" is updated.");
-          });
+          res.send("Ventilator "+id+" is updated.");
+          
         }
         else{
           res.send("Ventilator not available, status cannot be updated.")
         }
       });
-    }
-  });
 });
 //To delete a ventilator
 app.delete('/ventilators',middleware.checkToken,(req,res)=>{
   var id=req.body.vid;
-  MongoC.connect(url,{ useUnifiedTopology: true }, function(err, client) {
-    if(err) console.log(err); 
-    else{
-      const db=client.db(dbName);
-      const col2= db.collection("Ventilators");
       col2.countDocuments({vid:id},(err,result)=>{
         if(result>0){
           col2.deleteOne({vid:id});
@@ -106,18 +87,11 @@ app.delete('/ventilators',middleware.checkToken,(req,res)=>{
         else{
           res.send("Ventilator not available, cannot be deleted.")
         }
-      });
-    }
-    })    
+      });   
 })
 //To add a new ventilator
 app.post('/ventilators',middleware.checkToken,(req,res)=>{
-  MongoC.connect(url,{ useUnifiedTopology: true }, function(err, client) {
-    if(err) {console.log(err); }
-    else{
-      const db=client.db(dbName);
       var v=req.body.vid;
-      const col2= db.collection("Ventilators");
       col2.countDocuments({vid:v},(err,result)=>{
         if(result==0){
           col2.insertOne({hid:req.body.hid,vid:v,status:req.body.status,hname:req.body.hname});
@@ -127,9 +101,6 @@ app.post('/ventilators',middleware.checkToken,(req,res)=>{
           res.send("Ventilator already present, cannot have 2 ventilators with same ID.")
         }
       })  
-    }
-  });
-})
-
+});
 app.listen(3000);
 
